@@ -49,7 +49,29 @@ def register():
     db.session.commit()
 
     return jsonify({'message': 'User registered successfully'})
+@app.route('/update_user', methods=['PUT'])
+@jwt_required()
+def update_user():
+    data = request.get_json()
+    new_username = data.get('username')
+    new_password = data.get('password')
 
+    current_user = get_jwt_identity()
+    user = User.query.filter_by(username=current_user).first()
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+
+    if new_username and new_username != current_user:
+        if User.query.filter_by(username=new_username).first():
+            return jsonify({'error': 'Username already exists'}), 400
+        user.username = new_username
+
+    if new_password:
+        user.password = bcrypt.generate_password_hash(new_password).decode('utf-8')
+
+    db.session.commit()  # Commit the changes to the database
+
+    return jsonify({'message': 'User information updated successfully'})
 # Login Route
 @app.route('/login', methods=['POST'])
 def login():

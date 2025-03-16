@@ -67,7 +67,21 @@ body {
   font-size: 14px;
   font-weight: bold;
 }
+.edit-user-btn {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  padding: 10px 20px;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
 
+.edit-user-btn:hover {
+  background-color: #0056b3;
+}
 .logout-btn:hover {
   background-color: #cc0000; /* Darker Red on Hover */
 }

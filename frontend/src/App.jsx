@@ -2,6 +2,7 @@ import { Route, Routes, Link, useNavigate, useLocation } from "react-router-dom"
 import { useState, useEffect } from "react";
 import Register from "./Register";
 import Login from "./Login";
+import EditUser from "./EditUser";
 import "./App.css";
 
 function App() {
@@ -15,9 +16,9 @@ function App() {
     if (token) {
       setIsLoggedIn(true);
     } else {
-      // ✅ Redirect to login unless already on Register page
+      // ✅ Allow access to register page even when not logged in
       if (location.pathname !== "/register") {
-        navigate("/login");
+        navigate("/login"); // Redirect if not logged in
       }
     }
   }, [navigate, location.pathname]);
@@ -30,33 +31,36 @@ function App() {
 
   return (
     <>
-      {/* ✅ Show nav only when NOT logged in and NOT on login/register pages */}
-      {!isLoggedIn && location.pathname !== "/login" && location.pathname !== "/register" && (
-        <nav className="auth-nav">
+      {!isLoggedIn && (
+        <nav>
           <Link to="/register">Register</Link>
           <Link to="/login">Login</Link>
         </nav>
       )}
 
-      {/* ✅ Logout button when logged in */}
-      {isLoggedIn && (
-        <button className="logout-btn" onClick={handleLogout}>Logout</button>
-      )}
+ {isLoggedIn && (
+  <>
+    <button className="logout-btn" onClick={handleLogout}>Logout</button>
+    {location.pathname !== "/edit-user" && (
+      <button className="edit-user-btn" onClick={() => navigate("/edit-user")}>Edit User Info</button>
+    )}
+  </>
+)}
 
       <Routes>
-        <Route path="/" element={<Home />} />
+        <Route path="/" element={<Home isLoggedIn={isLoggedIn} />} />
         <Route path="/register" element={<Register />} />
         <Route path="/login" element={<Login onLogin={() => setIsLoggedIn(true)} />} />
+        <Route path="/edit-user" element={<EditUser />} />
       </Routes>
     </>
   );
 }
 
-// ✅ Improved Home Page
-const Home = () => (
-  <div className="home-container">
+const Home = ({ isLoggedIn }) => (
+  <div>
     <h1>Welcome to Autopick!</h1>
-    <p>Answer the following questions:</p>
+    <p>Please answer the following questions:</p>
     <ul>
       <li>Do you want a fuel-efficient car?</li>
       <li>Do you need cargo space?</li>
