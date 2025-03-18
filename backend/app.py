@@ -33,6 +33,30 @@ class User(db.Model):
 with app.app_context():
     db.create_all()
 
+# Account Deletion Route
+@app.route('/delete_account', methods=['DELETE'])
+@jwt_required()  # Ensure only authenticated users can delete accounts
+def delete_account():
+    try:
+        # Get the user identity from the JWT token (which should store 'username' instead of 'email')
+        current_username = get_jwt_identity()
+
+        # Query user from the database using 'username' instead of 'email'
+        user = User.query.filter_by(username=current_username).first()
+
+        if not user:
+            return jsonify({"message": "User not found"}), 404
+
+        # Delete user from database
+        db.session.delete(user)
+        db.session.commit()
+
+        return jsonify({"message": "Account deleted successfully"}), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+    
 # Registration Route
 @app.route('/register', methods=['POST'])
 def register():
