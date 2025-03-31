@@ -3,24 +3,24 @@ import { useState, useEffect } from "react";
 import Register from "./Register";
 import Login from "./Login";
 import EditUser from "./EditUser";
-import Admin from './Admin';
+import Admin from "./Admin";
+import Questionnaire from "./Questionnaire";
+import Recommendation from "./Recommendation";
 import "./App.css";
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const navigate = useNavigate();
-  const location = useLocation(); // Get the current path
+  const location = useLocation();
   const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
-
     if (token) {
       setIsLoggedIn(true);
     } else {
-      // ✅ Allow access to register page even when not logged in
       if (location.pathname !== "/register") {
-        navigate("/login"); // Redirect if not logged in
+        navigate("/login");
       }
     }
   }, [navigate, location.pathname]);
@@ -31,6 +31,8 @@ function App() {
     navigate("/login");
   };
 
+  const isOnQuizPage = location.pathname.includes("questionnaire") || location.pathname.includes("recommendation");
+
   return (
     <>
       {!isLoggedIn && (
@@ -40,60 +42,47 @@ function App() {
         </nav>
       )}
 
-      {isLoggedIn && (
+      {isLoggedIn && !isOnQuizPage && (
         <>
           <button className="logout-btn" onClick={handleLogout}>Logout</button>
 
           {location.pathname !== "/edit-user" && (
-            <button className="edit-user-btn" onClick={() => navigate("/edit-user")}>
-              Edit User Info
-            </button>
+            <button className="edit-user-btn top-left" onClick={() => navigate("/edit-user")}>Edit User Info</button>
           )}
 
           {location.pathname !== "/admin" && (
             <button
-  className="audit-logs-btn"
-  onClick={() => navigate("/admin")}
-  style={{
-    position: "absolute",
-    top: 10,
-    left: 130,
-    backgroundColor: "green",
-    color: "white",
-    border: "none",
-    padding: "8px 12px",
-    borderRadius: "4px",
-    cursor: "pointer",
-    marginLeft: "30px" // 👈 space between buttons
-  }}
->
-  Audit Logs
-</button>
-
+              className="audit-logs-btn top-left"
+              style={{ left: 150 }}
+              onClick={() => navigate("/admin")}
+            >
+              Audit Logs
+            </button>
           )}
         </>
       )}
 
       <Routes>
-        <Route path="/" element={<Home isLoggedIn={isLoggedIn} />} />
+        <Route path="/" element={<Home isLoggedIn={isLoggedIn} navigate={navigate} />} />
         <Route path="/register" element={<Register />} />
         <Route path="/login" element={<Login onLogin={() => setIsLoggedIn(true)} />} />
         <Route path="/edit-user" element={<EditUser />} />
         <Route path="/admin" element={<Admin />} />
+        <Route path="/questionnaire" element={<Questionnaire />} />
+        <Route path="/recommendation" element={<Recommendation />} />
       </Routes>
     </>
   );
 }
 
-const Home = ({ isLoggedIn }) => (
-  <div>
-    <h1>Welcome to Autopick!</h1>
-    <p>Please answer the following questions:</p>
-    <ul>
-      <li>Do you want a fuel-efficient car?</li>
-      <li>Do you need cargo space?</li>
-      <li>Will you be driving in snow?</li>
-    </ul>
+const Home = ({ isLoggedIn, navigate }) => (
+  <div className="home-container">
+    <div className="welcome-box">
+      <h1>Welcome to Autopick!</h1>
+      {isLoggedIn && (
+        <button className="quiz-btn" onClick={() => navigate("/questionnaire")}>Take Car Quiz</button>
+      )}
+    </div>
   </div>
 );
 

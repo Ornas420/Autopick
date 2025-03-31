@@ -6,21 +6,43 @@
   font-family: Arial, sans-serif;
 }
 
-body {
+body, html {
   background-color: #121212;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 100vh;
-}
-
-/* Centering the form */
-.form-wrapper {
-  display: flex;
-  align-items: center;
-  justify-content: center;
   height: 100vh;
   width: 100vw;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Center content on homepage */
+.home-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  color: white;
+  text-align: center;
+}
+
+/* Welcome text */
+.welcome-box {
+  max-width: 600px;
+  margin-top: 1rem;
+}
+
+/* Quiz button */
+.quiz-btn {
+  margin-top: 2rem;
+  padding: 14px 30px;
+  background-color: #007bff;
+  border: none;
+  color: white;
+  font-size: 18px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: bold;
 }
 
 /* Login/Register Box */
@@ -29,7 +51,8 @@ body {
   padding: 2rem;
   border-radius: 10px;
   box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.2);
-  width: 350px;
+  width: 100%;
+  max-width: 400px;
   text-align: center;
 }
 
@@ -52,14 +75,16 @@ body {
   border-radius: 5px;
   cursor: pointer;
   font-size: 16px;
+  margin-top: 1rem;
 }
+
 /* Logout Button */
 .logout-btn {
   position: absolute;
   top: 20px;
   right: 20px;
   padding: 10px 15px;
-  background-color: #ff4d4d; /* Red Logout Button */
+  background-color: #ff4d4d;
   color: white;
   border: none;
   cursor: pointer;
@@ -67,45 +92,54 @@ body {
   font-size: 14px;
   font-weight: bold;
 }
-.edit-user-btn {
+
+.edit-user-btn.top-left {
   position: absolute;
-  top: 10px;
-  left: 10px;
+  top: 20px;
+  left: 20px;
   padding: 10px 20px;
   background-color: #007bff;
   color: white;
   border: none;
   border-radius: 5px;
   cursor: pointer;
+  font-weight: bold;
 }
 
+/* Questionnaire styling */
+.form-container label {
+  display: flex;
+  align-items: center;
+  margin: 8px 0;
+  font-size: 15px;
+  text-align: left;
+  color: #eee;
+}
+
+.form-container input[type="checkbox"],
+.form-container input[type="radio"] {
+  margin-right: 10px;
+  transform: scale(1.1);
+}
+
+.form-container h2 {
+  margin-bottom: 20px;
+  color: #fff;
+  text-align: center;
+}
+
+/* Hover styles */
 .edit-user-btn:hover {
   background-color: #0056b3;
 }
+
 .logout-btn:hover {
-  background-color: #cc0000; /* Darker Red on Hover */
+  background-color: #cc0000;
 }
 
-.btn:hover {
+.btn:hover, .quiz-btn:hover {
   background-color: #0056b3;
 }
-
-/* Error Message (Red) */
-.error-message {
-  color: red;
-  margin-top: 10px;
-  font-size: 14px;
-  font-weight: bold;
-}
-
-/* Success Message (Green) */
-.success-message {
-  color: green;
-  margin-top: 10px;
-  font-size: 14px;
-  font-weight: bold;
-}
-
 
 /* Auth Links */
 .auth-links {
@@ -123,7 +157,69 @@ body {
   text-decoration: underline;
 }
 
-/* Hide the old top navigation */
 nav {
   display: none !important;
+}
+
+/* Positioning top-left buttons */
+.edit-user-btn, .audit-logs-btn {
+  position: absolute;
+  top: 20px;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  padding: 10px 15px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.edit-user-btn {
+  left: 20px;
+}
+
+.audit-logs-btn {
+  left: 150px; /* Positioned next to Edit User */
+}
+
+.edit-user-btn:hover, .audit-logs-btn:hover {
+  background-color: #0056b3;
+}
+
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(0,0,0,0.6);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 999;
+}
+
+.modal-box {
+  background-color: #1a1a1a;
+  padding: 2rem;
+  border-radius: 10px;
+  color: white;
+  width: 300px;
+  text-align: center;
+  box-shadow: 0 0 20px rgba(0,0,0,0.5);
+}
+
+.modal-buttons {
+  margin-top: 1.5rem;
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.modal-buttons .btn.confirm {
+  background-color: #28a745;
+}
+
+.modal-buttons .btn.cancel {
+  background-color: #dc3545;
 }
