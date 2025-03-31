@@ -9,13 +9,13 @@ from dotenv import load_dotenv
 
 load_dotenv()
 # Initialize OpenAI client
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))  # uzkomentuot jei nera rakto kitaip neveiks
 
 from datetime import timedelta
 
 app = Flask(__name__)
-app.config['JWT_SECRET_KEY'] = 'your_secret_key'  # Change this to a secure key
-app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(hours=1)  # Tokens expire in 1 hour
+app.config['JWT_SECRET_KEY'] = 'your_secret_key'
+app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(hours=1)
 jwt = JWTManager(app)
 
 CORS(app)
@@ -30,11 +30,26 @@ bcrypt = Bcrypt(app)
 # Token Blacklist (Temporary storage, use Redis or DB in production)
 blacklisted_tokens = set()
 
+
 # User Model
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
     password = db.Column(db.String(200), nullable=False)
+
+
+class AuditLog(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user = db.Column(db.String(255), nullable=False)
+    action = db.Column(db.String(255), nullable=False)
+    timestamp = db.Column(db.DateTime, default=db.func.current_timestamp())
+
+
+def log_action(user, action):
+    log = AuditLog(user=user, action=action)
+    db.session.add(log)
+    db.session.commit()
+
 
 class QuestionnaireResponse(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -52,9 +67,11 @@ class QuestionnaireResponse(db.Model):
 
     user = db.relationship('User', backref=db.backref('responses', lazy=True))
 
+
 # Create Tables
 with app.app_context():
     db.create_all()
+
 
 # Account Deletion Route
 @app.route('/delete_account', methods=['DELETE'])
@@ -73,13 +90,13 @@ def delete_account():
         # Delete user from database
         db.session.delete(user)
         db.session.commit()
-
+        log_action(current_username, "Deleted Account")
         return jsonify({"message": "Account deleted successfully"}), 200
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-    
+
 # Registration Route
 @app.route('/register', methods=['POST'])
 def register():
@@ -94,8 +111,11 @@ def register():
     new_user = User(username=username, password=hashed_password)
     db.session.add(new_user)
     db.session.commit()
+    log_action(username, "Registered")
 
     return jsonify({'message': 'User registered successfully'})
+
+
 @app.route('/update_user', methods=['PUT'])
 @jwt_required()
 def update_user():
@@ -116,9 +136,12 @@ def update_user():
     if new_password:
         user.password = bcrypt.generate_password_hash(new_password).decode('utf-8')
 
+    log_action(current_user, "Updated Account")
     db.session.commit()  # Commit the changes to the database
 
     return jsonify({'message': 'User information updated successfully'})
+
+
 # Login Route
 @app.route('/login', methods=['POST'])
 def login():
@@ -131,7 +154,9 @@ def login():
         return jsonify({'error': 'Invalid username or password'}), 401
 
     access_token = create_access_token(identity=username)
+    log_action(username, "Logged In")
     return jsonify({'token': access_token, 'message': 'Login successful'})
+
 
 # **Protected Home Route (Requires Token)**
 @app.route('/home', methods=['GET'])
@@ -140,23 +165,43 @@ def protected_home():
     current_user = get_jwt_identity()
     return jsonify({'message': f'Welcome {current_user}, you are logged in!'})
 
+
 # **Logout Route (Blacklist Token)**
 @app.route('/logout', methods=['POST'])
 @jwt_required()
 def logout():
-    jti = get_jwt()["jti"]  # Get token's unique ID
-    blacklisted_tokens.add(jti)  # Add to blacklist
+    current_user = get_jwt_identity()  # ✅ grab user before anything else
+    log_action(current_user, "Logged Out")  # ✅ works now
+    jti = get_jwt()["jti"]  # 🔐 get token ID after
+    blacklisted_tokens.add(jti)
     return jsonify({'message': 'Logout successful. Token invalidated.'})
+
 
 # **Check if Token is Blacklisted**
 @jwt.token_in_blocklist_loader
 def check_if_token_revoked(jwt_header, jwt_data):
     return jwt_data["jti"] in blacklisted_tokens  # Reject if blacklisted
 
+
+@app.route('/api/logs', methods=['GET'])
+@jwt_required()
+def get_logs():
+    logs = AuditLog.query.order_by(AuditLog.timestamp.desc()).all()
+    return jsonify([
+        {
+            'id': log.id,
+            'user': log.user,
+            'action': log.action,
+            'timestamp': log.timestamp.isoformat()
+        } for log in logs
+    ])
+
+
 # **List API Routes (Debugging)**
 @app.route('/routes', methods=['GET'])
 def list_routes():
     return jsonify({rule.rule: rule.endpoint for rule in app.url_map.iter_rules()})
+
 
 @app.route('/submit_questionnaire', methods=['POST'])
 @jwt_required()
