@@ -25,11 +25,25 @@ function App() {
     }
   }, [navigate, location.pathname]);
 
-  const handleLogout = () => {
-    localStorage.removeItem("token");
-    setIsLoggedIn(false);
-    navigate("/login");
-  };
+ const handleLogout = async () => {
+  const token = localStorage.getItem("token");
+
+  try {
+    await fetch("http://localhost:5000/logout", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+  } catch (err) {
+    console.error("Logout failed:", err);
+  }
+
+  localStorage.removeItem("token");
+  setIsLoggedIn(false);
+  navigate("/login");
+};
+
 
   const isOnQuizPage = location.pathname.includes("questionnaire") || location.pathname.includes("recommendation");
 
