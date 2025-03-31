@@ -20,8 +20,10 @@ const Login = ({ onLogin }) => {
 
     if (response.ok) {
       localStorage.setItem("token", data.token);
+
       onLogin();
       navigate("/");
+
     } else {
       setMessage(data.error || "Login failed");
     }

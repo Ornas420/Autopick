@@ -3,12 +3,14 @@ import { useState, useEffect } from "react";
 import Register from "./Register";
 import Login from "./Login";
 import EditUser from "./EditUser";
+import Admin from './Admin';
 import "./App.css";
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const navigate = useNavigate();
   const location = useLocation(); // Get the current path
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -38,20 +40,46 @@ function App() {
         </nav>
       )}
 
- {isLoggedIn && (
-  <>
-    <button className="logout-btn" onClick={handleLogout}>Logout</button>
-    {location.pathname !== "/edit-user" && (
-      <button className="edit-user-btn" onClick={() => navigate("/edit-user")}>Edit User Info</button>
-    )}
-  </>
-)}
+      {isLoggedIn && (
+        <>
+          <button className="logout-btn" onClick={handleLogout}>Logout</button>
+
+          {location.pathname !== "/edit-user" && (
+            <button className="edit-user-btn" onClick={() => navigate("/edit-user")}>
+              Edit User Info
+            </button>
+          )}
+
+          {location.pathname !== "/admin" && (
+            <button
+  className="audit-logs-btn"
+  onClick={() => navigate("/admin")}
+  style={{
+    position: "absolute",
+    top: 10,
+    left: 130,
+    backgroundColor: "green",
+    color: "white",
+    border: "none",
+    padding: "8px 12px",
+    borderRadius: "4px",
+    cursor: "pointer",
+    marginLeft: "30px" // 👈 space between buttons
+  }}
+>
+  Audit Logs
+</button>
+
+          )}
+        </>
+      )}
 
       <Routes>
         <Route path="/" element={<Home isLoggedIn={isLoggedIn} />} />
         <Route path="/register" element={<Register />} />
         <Route path="/login" element={<Login onLogin={() => setIsLoggedIn(true)} />} />
         <Route path="/edit-user" element={<EditUser />} />
+        <Route path="/admin" element={<Admin />} />
       </Routes>
     </>
   );
