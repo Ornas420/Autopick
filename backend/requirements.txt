@@ -7,3 +7,4 @@ requests
 pymysql
 pytest
 openai
+dotenv
