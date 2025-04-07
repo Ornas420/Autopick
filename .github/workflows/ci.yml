@@ -3,12 +3,10 @@ name: CI Pipeline
 on:
   push:
     branches:
-      - develop
-      - main
+      - '*'     # veiks visose šakose
   pull_request:
     branches:
-      - develop
-      - main
+      - '*'
       
 
 jobs:
