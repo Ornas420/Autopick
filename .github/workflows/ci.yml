@@ -46,7 +46,7 @@ jobs:
       - name: Install dependencies
         run: |
           cd backend
-          pip install -r requirements.txt || pip install flask flask_sqlalchemy pymysql flask_cors pytest python-dotenv
+          pip install -r requirements.txt
 
       - name: Run tests
         run: |
