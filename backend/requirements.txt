@@ -8,3 +8,4 @@ pymysql
 pytest
 openai
 dotenv
+cryptography
