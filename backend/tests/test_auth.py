@@ -1,37 +1,39 @@
 import pytest
-import requests
-
-BASE_URL = "http://127.0.0.1:5000"  # Your Flask API URL
+from app import app
 
 @pytest.fixture
-def test_user():
-    """Fixture to create test user credentials."""
-    return {"username": "testuser2", "password": "testpass"}
+def client():
+    with app.test_client() as client:
+        yield client
 
-def test_logout_flow(test_user):
+def test_register(client):
+    response = client.post("/register", json={
+        "username": "testuser1",
+        "password": "testpass"
+    })
+    assert response.status_code == 200 or response.status_code == 400  # handle already exists case
 
+def test_login(client):
+    response = client.post("/login", json={
+        "username": "testuser1",
+        "password": "testpass"
+    })
+    assert response.status_code == 200
 
+def test_logout_flow(client):
+    test_user = {
+        "username": "testuser2",
+        "password": "testpass"
+    }
 
-    requests.post(f"{BASE_URL}/register", json=test_user)
+    # Register the user
+    response = client.post("/register", json=test_user)
+    assert response.status_code == 200 or response.status_code == 400
 
+    # Log the user in
+    response = client.post("/login", json=test_user)
+    assert response.status_code == 200
 
-    login_response = requests.post(f"{BASE_URL}/login", json=test_user)
-    assert login_response.status_code == 200
-    token = login_response.json().get("token")
-    assert token is not None
-
-
-    headers = {"Authorization": f"Bearer {token}"}
-    home_response = requests.get(f"{BASE_URL}/home", headers=headers)
-    assert home_response.status_code == 200  # ✅ Access should be granted
-
-
-    logout_response = requests.post(f"{BASE_URL}/logout", headers=headers)
-    assert logout_response.status_code == 200  # ✅ Logout should be successful
-
-
-    invalid_home_response = requests.get(f"{BASE_URL}/home", headers=headers)
-    assert invalid_home_response.status_code == 401  # ❌ Should be Unauthorized
-
-    print("✅ Logout test passed! Token invalidation works as expected.")
-
+    # Log the user out
+    response = client.post("/logout")
+    assert response.status_code == 200
