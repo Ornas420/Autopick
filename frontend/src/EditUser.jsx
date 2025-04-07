@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
@@ -23,33 +24,59 @@ function EditUser() {
       setMessage(response.data.message);
       if (response.data.message === 'User information updated successfully') {
         localStorage.setItem("username", username);
-        navigate("/"); // Redirect to home or any other page
+        navigate("/");
       }
     } catch (error) {
       setMessage(error.response?.data?.error || "An error occurred");
     }
   };
 
+  const handleDelete = async () => {
+    const confirm = window.confirm("Are you sure you want to delete your account?");
+    if (!confirm) return;
+
+    try {
+      const token = localStorage.getItem("token");
+      const response = await axios.delete("http://127.0.0.1:5000/delete_account", {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+
+      setMessage(response.data.message);
+      localStorage.removeItem("token");
+      localStorage.removeItem("username");
+      navigate("/");
+    } catch (error) {
+      setMessage(error.response?.data?.error || "Error deleting account");
+    }
+  };
+
   return (
     <div className="form-container">
-      <h2>Edit User Information</h2>
+      <h2>Edit Account</h2>
       <form onSubmit={handleUpdate}>
         <input
           type="text"
-          placeholder="New Username"
+          placeholder="New username"
           value={username}
           onChange={(e) => setUsername(e.target.value)}
           className="input-field"
         />
         <input
           type="password"
-          placeholder="New Password"
+          placeholder="New password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           className="input-field"
         />
-        <button type="submit" className="btn">Confirm</button>
+        <button type="submit" className="btn">Update</button>
       </form>
+
+      <div style={{ marginTop: "20px" }}>
+        <button onClick={handleDelete} className="btn danger">Delete Account</button>
+      </div>
+
       {message && <p className="message">{message}</p>}
     </div>
   );
