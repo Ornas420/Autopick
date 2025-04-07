@@ -6,3 +6,4 @@ flask_jwt_extended
 requests
 pymysql
 pytest
+openai
