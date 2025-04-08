@@ -67,18 +67,19 @@ def test_update_user_username_exists(client, token):
     assert "error" in response.json
     assert response.json["error"] == "Username already exists"
 
-def test_update_user_not_found(client):
-    """Test update failure when the user is not found."""
-    with app.app_context():
-        # Generate a token for a non-existent user
-        non_existent_token = create_access_token(identity='nonexistentuser')
-
+def test_update_user_success_instant(client, token):
+    """Test successful user update and immediate database change."""
     response = client.put(
         "/update_user",
-        headers={'Authorization': f'Bearer {non_existent_token}'},
+        headers={'Authorization': f'Bearer {token}'},
         data=json.dumps({"username": "newusername", "password": "newpassword"}),
         content_type="application/json",
     )
-    assert response.status_code == 404
-    assert "error" in response.json
-    assert response.json["error"] == "User not found"
+    assert response.status_code == 200
+    assert response.json["message"] == "User information updated successfully"
+
+    # Verify user information is updated in the database immediately
+    with app.app_context():
+        user = User.query.filter_by(username="newusername").first()
+        assert user is not None
+        assert bcrypt.check_password_hash(user.password, "newpassword")
