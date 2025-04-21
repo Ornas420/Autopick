@@ -1,55 +1,43 @@
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, Blueprint
 from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
 from flask_bcrypt import Bcrypt
-from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity, get_jwt
+from flask_jwt_extended import (
+    JWTManager, create_access_token, jwt_required,
+    get_jwt_identity, get_jwt
+)
 from openai import OpenAI
-import os
+from datetime import timedelta
 from dotenv import load_dotenv
+import os
 
 load_dotenv()
-# Initialize OpenAI client
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))  # uzkomentuot jei nera rakto kitaip neveiks
-
-from datetime import timedelta
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 app = Flask(__name__)
 app.config['JWT_SECRET_KEY'] = 'your_secret_key'
 app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(hours=1)
-jwt = JWTManager(app)
-
-CORS(app)
-
-# Database Config
 app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://root:root@127.0.0.1/autopick_db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
+jwt = JWTManager(app)
 db = SQLAlchemy(app)
 bcrypt = Bcrypt(app)
+CORS(app)
 
-# Token Blacklist (Temporary storage, use Redis or DB in production)
 blacklisted_tokens = set()
 
-
-# User Model
+# Models
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
     password = db.Column(db.String(200), nullable=False)
-
 
 class AuditLog(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user = db.Column(db.String(255), nullable=False)
     action = db.Column(db.String(255), nullable=False)
     timestamp = db.Column(db.DateTime, default=db.func.current_timestamp())
-
-
-def log_action(user, action):
-    log = AuditLog(user=user, action=action)
-    db.session.add(log)
-    db.session.commit()
-
 
 class QuestionnaireResponse(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -67,37 +55,15 @@ class QuestionnaireResponse(db.Model):
 
     user = db.relationship('User', backref=db.backref('responses', lazy=True))
 
-
-# Create Tables
 with app.app_context():
     db.create_all()
 
+# Logging
+def log_action(user, action):
+    db.session.add(AuditLog(user=user, action=action))
+    db.session.commit()
 
-# Account Deletion Route
-@app.route('/delete_account', methods=['DELETE'])
-@jwt_required()  # Ensure only authenticated users can delete accounts
-def delete_account():
-    try:
-        # Get the user identity from the JWT token (which should store 'username' instead of 'email')
-        current_username = get_jwt_identity()
-
-        # Query user from the database using 'username' instead of 'email'
-        user = User.query.filter_by(username=current_username).first()
-
-        if not user:
-            return jsonify({"message": "User not found"}), 404
-
-        # Delete user from database
-        db.session.delete(user)
-        db.session.commit()
-        log_action(current_username, "Deleted Account")
-        return jsonify({"message": "Account deleted successfully"}), 200
-
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-
-# Registration Route
+# Auth and main routes
 @app.route('/register', methods=['POST'])
 def register():
     data = request.get_json()
@@ -115,6 +81,52 @@ def register():
 
     return jsonify({'message': 'User registered successfully'})
 
+@app.route('/login', methods=['POST'])
+def login():
+    data = request.get_json()
+    username = data.get('username')
+    password = data.get('password')
+
+    user = User.query.filter_by(username=username).first()
+    if not user or not bcrypt.check_password_hash(user.password, password):
+        return jsonify({'error': 'Invalid username or password'}), 401
+
+    access_token = create_access_token(identity=username)
+    log_action(username, "Logged In")
+    return jsonify({'token': access_token, 'message': 'Login successful'})
+
+@app.route('/logout', methods=['POST'])
+@jwt_required()
+def logout():
+    current_user = get_jwt_identity()
+    log_action(current_user, "Logged Out")
+    jti = get_jwt()["jti"]
+    blacklisted_tokens.add(jti)
+    return jsonify({'message': 'Logout successful. Token invalidated.'})
+
+@jwt.token_in_blocklist_loader
+def check_if_token_revoked(jwt_header, jwt_data):
+    return jwt_data["jti"] in blacklisted_tokens
+
+@app.route('/home', methods=['GET'])
+@jwt_required()
+def protected_home():
+    current_user = get_jwt_identity()
+    return jsonify({'message': f'Welcome {current_user}, you are logged in!'})
+
+@app.route('/delete_account', methods=['DELETE'])
+@jwt_required()
+def delete_account():
+    current_user = get_jwt_identity()
+    user = User.query.filter_by(username=current_user).first()
+
+    if not user:
+        return jsonify({"message": "User not found"}), 404
+
+    db.session.delete(user)
+    db.session.commit()
+    log_action(current_user, "Deleted Account")
+    return jsonify({"message": "Account deleted successfully"}), 200
 
 @app.route('/update_user', methods=['PUT'])
 @jwt_required()
@@ -136,72 +148,9 @@ def update_user():
     if new_password:
         user.password = bcrypt.generate_password_hash(new_password).decode('utf-8')
 
+    db.session.commit()
     log_action(current_user, "Updated Account")
-    db.session.commit()  # Commit the changes to the database
-
     return jsonify({'message': 'User information updated successfully'})
-
-
-# Login Route
-@app.route('/login', methods=['POST'])
-def login():
-    data = request.get_json()
-    username = data.get('username')
-    password = data.get('password')
-
-    user = User.query.filter_by(username=username).first()
-    if not user or not bcrypt.check_password_hash(user.password, password):
-        return jsonify({'error': 'Invalid username or password'}), 401
-
-    access_token = create_access_token(identity=username)
-    log_action(username, "Logged In")
-    return jsonify({'token': access_token, 'message': 'Login successful'})
-
-
-# **Protected Home Route (Requires Token)**
-@app.route('/home', methods=['GET'])
-@jwt_required()
-def protected_home():
-    current_user = get_jwt_identity()
-    return jsonify({'message': f'Welcome {current_user}, you are logged in!'})
-
-
-# **Logout Route (Blacklist Token)**
-@app.route('/logout', methods=['POST'])
-@jwt_required()
-def logout():
-    current_user = get_jwt_identity()  # ✅ grab user before anything else
-    log_action(current_user, "Logged Out")  # ✅ works now
-    jti = get_jwt()["jti"]  # 🔐 get token ID after
-    blacklisted_tokens.add(jti)
-    return jsonify({'message': 'Logout successful. Token invalidated.'})
-
-
-# **Check if Token is Blacklisted**
-@jwt.token_in_blocklist_loader
-def check_if_token_revoked(jwt_header, jwt_data):
-    return jwt_data["jti"] in blacklisted_tokens  # Reject if blacklisted
-
-
-@app.route('/api/logs', methods=['GET'])
-@jwt_required()
-def get_logs():
-    logs = AuditLog.query.order_by(AuditLog.timestamp.desc()).all()
-    return jsonify([
-        {
-            'id': log.id,
-            'user': log.user,
-            'action': log.action,
-            'timestamp': log.timestamp.isoformat()
-        } for log in logs
-    ])
-
-
-# **List API Routes (Debugging)**
-@app.route('/routes', methods=['GET'])
-def list_routes():
-    return jsonify({rule.rule: rule.endpoint for rule in app.url_map.iter_rules()})
-
 
 @app.route('/submit_questionnaire', methods=['POST'])
 @jwt_required()
@@ -213,7 +162,6 @@ def submit_questionnaire():
     if not user:
         return jsonify({"error": "User not found"}), 404
 
-    # 🔷 Construct prompt with all preferences
     prompt = (
         f"Please recommend exactly 5 specific car models based on the following user preferences:\n"
         f"- Must-Haves: {', '.join(data.get('mustHaves', []))}\n"
@@ -231,7 +179,6 @@ def submit_questionnaire():
         "3. If no cars match, just say: 'No suitable cars found for the selected preferences.'"
     )
 
-    # 🔷 Call OpenAI and get recommendation
     gpt_response = client.chat.completions.create(
         model="gpt-4o",
         messages=[
@@ -242,7 +189,6 @@ def submit_questionnaire():
 
     recommendation = gpt_response.choices[0].message.content.strip()
 
-    # 🔷 Save everything to DB (including GPT result)
     response = QuestionnaireResponse(
         user_id=user.id,
         must_haves=",".join(data.get("mustHaves", [])),
@@ -261,6 +207,28 @@ def submit_questionnaire():
 
     return jsonify({"recommendation": recommendation})
 
+@app.route('/routes', methods=['GET'])
+def list_routes():
+    return jsonify({rule.rule: rule.endpoint for rule in app.url_map.iter_rules()})
+
+# 🔁 Blueprint for /api/logs/<id> (filtered by user)
+logs_bp = Blueprint('logs', __name__)
+
+@logs_bp.route('/api/logs/<id>', methods=['GET'])
+@jwt_required()
+def get_logs(id):
+    current_user = get_jwt_identity()
+    logs = AuditLog.query.filter_by(user=current_user).order_by(AuditLog.timestamp.desc()).all()
+    return jsonify([
+        {
+            'id': log.id,
+            'user': log.user,
+            'action': log.action,
+            'timestamp': (log.timestamp + timedelta(hours=9)).isoformat()
+        } for log in logs
+    ])
+
+app.register_blueprint(logs_bp)
 
 if __name__ == '__main__':
     app.run(debug=True)
