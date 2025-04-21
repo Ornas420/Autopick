@@ -31,8 +31,8 @@ export default function Admin() {
         onClick={() => navigate('/')}
         style={{
           position: 'absolute',
-          top: '10px',
-          left: '10px',
+          top: '20px',
+          left: '20px',
           backgroundColor: '#4B5563',
           color: 'white',
           fontSize: '18px',
