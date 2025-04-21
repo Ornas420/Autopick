@@ -17,7 +17,7 @@ client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 app = Flask(__name__)
 app.config['JWT_SECRET_KEY'] = 'your_secret_key'
 app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(hours=1)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://root:root@127.0.0.1/autopick_db'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://root@127.0.0.1/autopick_db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 jwt = JWTManager(app)
@@ -214,11 +214,13 @@ def list_routes():
 # 🔁 Blueprint for /api/logs/<id> (filtered by user)
 logs_bp = Blueprint('logs', __name__)
 
-@logs_bp.route('/api/logs/<id>', methods=['GET'])
+
+@logs_bp.route('/api/logs', methods=['GET'])
 @jwt_required()
-def get_logs(id):
+def get_logs():
     current_user = get_jwt_identity()
     logs = AuditLog.query.filter_by(user=current_user).order_by(AuditLog.timestamp.desc()).all()
+
     return jsonify([
         {
             'id': log.id,
@@ -227,6 +229,7 @@ def get_logs(id):
             'timestamp': (log.timestamp + timedelta(hours=9)).isoformat()
         } for log in logs
     ])
+
 
 app.register_blueprint(logs_bp)
 
