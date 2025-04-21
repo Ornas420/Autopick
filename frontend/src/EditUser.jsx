@@ -13,7 +13,7 @@ function EditUser() {
     e.preventDefault();
     try {
       const token = localStorage.getItem("token");
-      const response = await axios.put("http://127.0.0.1:5000/update_user", {
+      const response = await axios.put("https://127.0.0.1:5000/update_user", {
         username,
         password,
       }, {
@@ -37,7 +37,7 @@ function EditUser() {
 
     try {
       const token = localStorage.getItem("token");
-      const response = await axios.delete("http://127.0.0.1:5000/delete_account", {
+      const response = await axios.delete("https://127.0.0.1:5000/delete_account", {
         headers: {
           Authorization: `Bearer ${token}`
         }
@@ -53,33 +53,36 @@ function EditUser() {
   };
 
   return (
-    <div className="form-container">
-      <h2>Edit Account</h2>
-      <form onSubmit={handleUpdate}>
-        <input
-          type="text"
-          placeholder="New username"
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
-          className="input-field"
-        />
-        <input
-          type="password"
-          placeholder="New password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          className="input-field"
-        />
-        <button type="submit" className="btn">Update</button>
-      </form>
+    <div className="center-screen">
+      <div className="form-container">
+        <h2>Edit Account</h2>
+        <form onSubmit={handleUpdate}>
+          <input
+            type="text"
+            placeholder="New username"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            className="input-field"
+          />
+          <input
+            type="password"
+            placeholder="New password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className="input-field"
+          />
+          <button type="submit" className="btn">Update</button>
+        </form>
 
-      <div style={{ marginTop: "20px" }}>
-        <button onClick={handleDelete} className="btn danger">Delete Account</button>
+        <button onClick={handleDelete} className="btn danger" style={{ marginTop: '1rem' }}>
+          Delete Account
+        </button>
+
+        {message && <p className="message">{message}</p>}
       </div>
-
-      {message && <p className="message">{message}</p>}
     </div>
   );
+
 }
 
 export default EditUser;
