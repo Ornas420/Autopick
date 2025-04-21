@@ -1,8 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import "./App.css"; // Ensure CSS is applied
 
-const Login = ({ onLogin }) => {
+const Login = () => {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState("");
@@ -20,10 +19,9 @@ const Login = ({ onLogin }) => {
 
     if (response.ok) {
       localStorage.setItem("token", data.token);
+      localStorage.setItem("username", username);
 
-      onLogin();
-      navigate("/");
-
+      navigate("/"); // ✅ works now
     } else {
       setMessage(data.error || "Login failed");
     }
